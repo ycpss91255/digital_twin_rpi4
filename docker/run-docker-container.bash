@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # start sharing xhost
-xhost +local:root
+# xhost +local:root
 
 # run docker
 docker run --rm \

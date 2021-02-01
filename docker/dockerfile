@@ -1,4 +1,6 @@
-FROM --platform=linux/arm64 osrf/ros:noetic-desktop-focal
+# syntax = docker/dockerfile:experimental
+FROM --platform=linux/arm64/v8 ros:noetic-ros-core-focal
+# FROM ros:noetic-ros-core-focal
 
 # Arguments
 ARG USER=initial
@@ -11,15 +13,22 @@ ARG SHELL=/bin/bash
 RUN sed -i 's@archive.ubuntu.com@ftp.tku.edu.tw/@g' /etc/apt/sources.list
 
 # Install packages
+# RUN apt-get update && apt-get install -y --no-install-recommends \
+#     ssh byobu nano git sudo rsync file \
+#     zsh tig terminator gnome-terminal \
+#     dbus-x11 libglvnd0 libgl1 libglx0 libegl1 libxext6 libx11-6 \
+#     gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
+#   && apt-get clean \
+#   && rm -rf /var/lib/apt/lists/*
+
+# Install packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ssh byobu nano git sudo rsync file \
-    zsh tig terminator gnome-terminal \
-    dbus-x11 libglvnd0 libgl1 libglx0 libegl1 libxext6 libx11-6 \
-    gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
-# sudo apt-get install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+    # gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf \
+
 
 # Env vars for the nvidia-container-runtime.
 ENV NVIDIA_VISIBLE_DEVICES all
@@ -38,10 +47,10 @@ RUN groupadd --gid ${GID} ${GROUP} \
 COPY config/entrypoint.bash /entrypoint.bash
 RUN chmod 777 /entrypoint.bash
 
-# setup terminator config
-RUN mkdir -p /home/${USER}/.config/terminator
-COPY config/terminator/config /home/${USER}/.config/terminator
-RUN sudo chown -R ${USER}:${GROUP} /home/${USER}/.config
+# # setup terminator config
+# RUN mkdir -p /home/${USER}/.config/terminator
+# COPY config/terminator/config /home/${USER}/.config/terminator
+# RUN sudo chown -R ${USER}:${GROUP} /home/${USER}/.config
 
 # setup git config
 RUN mkdir -p /home/${USER}/tmp/git
@@ -60,4 +69,4 @@ EXPOSE 22
 WORKDIR /home/${USER}
 
 # CMD ["terminator"]
-ENTRYPOINT ["/entrypoint.bash","terminator"]
+ENTRYPOINT ["/entrypoint.bash","byobu"]
