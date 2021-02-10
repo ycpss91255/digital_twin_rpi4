@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# start sharing xhost
-# xhost +local:root
-
 # run docker
 docker run --rm \
   --net=host \
