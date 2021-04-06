@@ -20,46 +20,39 @@ RUN groupadd --gid ${GID} ${GROUP} \
 RUN sed -i 's@archive.ubuntu.com@ftp.tku.edu.tw/@g' /etc/apt/sources.list
 # Install packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      ssh sudo rsync wget net-tools \
-      byobu zsh terminator gnome-terminal \
-      nano vim git \
-      python3-pip python3-catkin-tools\
-  && python3 -m pip install --upgrade --force-reinstall pip \
+      sudo net-tools htop git rsync wget zip unzip \
+      byobu zsh terminator \
+      nano vim \
+      python3-pip python3-catkin-tools python3-setuptools \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
+WORKDIR /home/${USER}/.tmp
+
 # setup custom configuration
-COPY config /home/${USER}/.tmp
-# bashrc
-RUN cat /home/${USER}/.tmp/bashrc/* >> /home/${USER}/.bashrc \
-  # zsh
-  && mv /home/${USER}/.tmp/zsh/powerlevel10k /home/${USER}/ \
-  && sudo mv /home/${USER}/.tmp/zsh/.p10k.zsh /home/${USER}/ \
-  && cat /home/${USER}/.tmp/zsh/zshrc/* >> /home/${USER}/.zshrc \
-  # byobu-zsh
-  && mkdir -p /home/${USER}/.byobu \
-  && cat /home/${USER}/.tmp/byobu/* > /home/${USER}/.byobu/.tmux.conf \
-  && chown -R ${USER}:${GROUP} /home/${USER}/.byobu \
-  # usb rule
-  && sudo mkdir -p /etc/udev/rules.d/ \
-  && sudo cp /home/${USER}/.tmp/rule/* /etc/udev/rules.d/ \
-  # python3
-  && pip3 install -r /home/${USER}/.tmp/pip/requirements.txt \
-  && mkdir -p /home/${USER}/.config/terminator \
-  && cp -r /home/${USER}/.tmp/terminator /home/${USER}/.config/terminator \
-  && chown -R ${USER}:${GROUP} /home/${USER}/.config \
-  && sudo rm -rf /home/${USER}/.tmp
+COPY config .
+# shell
+RUN bash ./script/bash_setup.bash \
+  && bash ./script/terminator_setup.bash \
+  && bash ./script/zsh_setup.bash \
+  && bash ./script/byobu_setup.bash \
+  # Dependent
+  && bash ./script/rule_setup.bash \
+  && bash ./script/pip_setup.bash \
+  && bash ./script/pigpio_setup.bash \
+  && rm -rf /home/${USER}/.tmp
 
-
+# RUN pigpiod
+WORKDIR /home/${USER}
 # Switch user to ${USER}
 USER ${USER}
+
 RUN sudo mkdir work
 
 # Make SSH available
 EXPOSE 22
 
 # Switch to user's HOME folder
-WORKDIR /home/${USER}
+WORKDIR /home/${USER}/work
 
 ENTRYPOINT ["byobu"]
-
