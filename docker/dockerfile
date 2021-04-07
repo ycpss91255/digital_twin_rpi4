@@ -40,6 +40,7 @@ RUN bash ./script/bash_setup.bash \
   && bash ./script/rule_setup.bash \
   && bash ./script/pip_setup.bash \
   && bash ./script/pigpio_setup.bash \
+  #TODO : wait done pigpiod
   && rm -rf /home/${USER}/.tmp
 
 # RUN pigpiod
