@@ -40,12 +40,17 @@ RUN bash ./script/bash_setup.bash \
   && bash ./script/rule_setup.bash \
   && bash ./script/pip_setup.bash \
   && bash ./script/pigpio_setup.bash \
-  #TODO : wait done pigpiod
   && rm -rf /home/${USER}/.tmp
 
 # RUN pigpiod
 WORKDIR /home/${USER}
 # Switch user to ${USER}
+
+# copy entrypoint
+COPY entrypoint.bash /entrypoint.bash
+RUN chmod 777 /entrypoint.bash
+
+
 USER ${USER}
 
 RUN sudo mkdir work
@@ -56,4 +61,4 @@ EXPOSE 22
 # Switch to user's HOME folder
 WORKDIR /home/${USER}/work
 
-ENTRYPOINT ["byobu"]
+ENTRYPOINT ["/entrypoint.bash","byobu"]
