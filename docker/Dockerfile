@@ -42,15 +42,14 @@ RUN bash ./script/bash_setup.bash \
   && bash ./script/pigpio_setup.bash \
   && rm -rf /home/${USER}/.tmp
 
-# RUN pigpiod
-WORKDIR /home/${USER}
-# Switch user to ${USER}
-
 # copy entrypoint
 COPY entrypoint.bash /entrypoint.bash
 RUN chmod 777 /entrypoint.bash
 
+# RUN pigpiod
+WORKDIR /home/${USER}
 
+# Switch user to ${USER}
 USER ${USER}
 
 RUN sudo mkdir work
