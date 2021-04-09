@@ -62,3 +62,4 @@ EXPOSE 22
 WORKDIR /home/${USER}/work
 
 ENTRYPOINT ["/entrypoint.bash","byobu"]
+# ENTRYPOINT ["byobu"]
