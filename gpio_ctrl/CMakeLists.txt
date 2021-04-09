@@ -6,15 +6,28 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  geometry_msgs
+  message_generation
 )
 
+add_message_files(
+  FILES
+  MotorData.msg
+)
+generate_messages(
+  DEPENDENCIES
+  std_msgs  # Or other packages containing msgs
+)
 
 catkin_package(
  INCLUDE_DIRS
   include
-#  LIBRARIES gpio_ctrl
- CATKIN_DEPENDS geometry_msgs roscpp rospy std_msgs
-#  DEPENDS system_lib
+ CATKIN_DEPENDS
+  geometry_msgs
+  roscpp
+  rospy
+  std_msgs
+  message_runtime
 )
 
 include_directories(
@@ -24,3 +37,4 @@ include_directories(
 )
 
 add_subdirectory(src)
+add_subdirectory(test)
