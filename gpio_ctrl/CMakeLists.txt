@@ -12,7 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 add_message_files(
   FILES
-  MotorData.msg
+  MotorFB.msg
 )
 generate_messages(
   DEPENDENCIES

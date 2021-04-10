@@ -13,6 +13,10 @@
  ******************************/
 #include "ros/ros.h"
 /*******************************
+ ** Include msg header files
+ ******************************/
+#include "gpio_ctrl/MotorFB.h"
+/*******************************
  ** Include header files
  ******************************/
 #include <pigpiod_if2.h>
@@ -24,6 +28,7 @@
 typedef struct {
   int PWM;
   int DIR;
+  int ENC[2];
   int CS;
 }MotorData;
 
@@ -31,7 +36,7 @@ typedef struct {
   MotorData A;
   MotorData B;
   int SLP;
-} MD02Data;
+}MD02Data;
 
 class MotorControl {
  public:
@@ -44,7 +49,10 @@ class MotorControl {
 
   // function
   void setSpeed(float, float);
-  // TODO : add get enc value function
+  // TODO : add get enc value functionz
+  int64_t getEnc();
+  // TODO : add enc read function
+  void readEnc();
  private:
   // variable
   int PI;
@@ -53,7 +61,6 @@ class MotorControl {
   // function
   void init();
   void setPWM(MotorData, MotorData, float);
-  // TODO : add enc read function
 };
 
 #endif // MotorControl_H
