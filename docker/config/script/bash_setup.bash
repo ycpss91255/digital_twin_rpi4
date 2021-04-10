@@ -1,3 +1,3 @@
 #!/bin/bash
 
-cat ./bashrc/* >>/home/${USER}/.bashrc
+cat ./bashrc/*.sh >>/home/${USER}/.bashrc

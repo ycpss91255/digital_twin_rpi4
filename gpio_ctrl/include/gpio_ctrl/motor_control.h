@@ -40,13 +40,11 @@ class MotorControl {
 
  public:
   // variable
-  // gpio_ctrl::MotorData MotorA;
-  // gpio_ctrl::MotorData MotorB;
+  MD02Data DevCmd;
 
   // function
   void setSpeed(float, float);
-  MD02Data DevCmd;
-
+  // TODO : add get enc value function
  private:
   // variable
   int PI;
@@ -55,7 +53,7 @@ class MotorControl {
   // function
   void init();
   void setPWM(MotorData, MotorData, float);
-
+  // TODO : add enc read function
 };
 
 #endif // MotorControl_H

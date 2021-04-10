@@ -23,6 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       sudo net-tools htop git rsync wget zip unzip \
       byobu zsh terminator \
       nano vim \
+      # work-tools
       python3-pip python3-catkin-tools python3-setuptools \
       python3-gpiozero \
   && apt-get clean \
@@ -47,7 +48,6 @@ RUN bash ./script/bash_setup.bash \
 COPY entrypoint.bash /entrypoint.bash
 RUN chmod 777 /entrypoint.bash
 
-# RUN pigpiod
 WORKDIR /home/${USER}
 
 # Switch user to ${USER}

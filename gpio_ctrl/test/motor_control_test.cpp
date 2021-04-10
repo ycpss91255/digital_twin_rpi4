@@ -18,6 +18,9 @@ int main(int argc, char **argv) {
 
   Pin1.SLP = 12;
 
+// HACK : En_Y 23 En_G 24 11enc.
+
+
   MotorControl Dev1(Pin1);
   for(int i = 0 ; i < 10 ; i++){
     Dev1.setSpeed(-100, 100);
