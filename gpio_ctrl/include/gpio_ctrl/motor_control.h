@@ -28,8 +28,11 @@
 typedef struct {
   int PWM;
   int DIR;
-  int ENC[2];
   int CS;
+  int gpio_enA;
+  int gpio_enB;
+  int LevA;
+  int LevB;
 }MotorData;
 
 typedef struct {
@@ -53,13 +56,16 @@ class MotorControl {
   int64_t getEnc();
   // TODO : add enc read function
   void readEnc();
+
  private:
   // variable
-  int PI;
+  int pi;
   MD02Data DevPin;
+  int glitch = 1000;
 
   // function
   void init();
+  void clear();
   void setPWM(MotorData, MotorData, float);
 };
 
