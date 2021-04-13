@@ -1,7 +1,13 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(gpio_ctrl)
 
-find_library(LIBPIGPIOD_IF2_LIBRARIES NAMES pigpiod_if2)
+# add_library(YAML_LIB /usr/include/yaml-cpp/yaml.h )
+
+
+find_library(LIBPIGPIOD_IF2_LIBRARIES
+ NAMES
+  pigpiod_if2
+)
 
 # test
 set(MCT_LIST

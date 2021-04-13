@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <cmath>
+#include <string.h>
 /*******************************
  * Include ROS header files
  ******************************/
@@ -19,54 +20,56 @@
 /*******************************
  ** Include header files
  ******************************/
+#include "gpio_ctrl/motor_typedef.h"
 #include <pigpiod_if2.h>
 /*******************************
  * Define
  ******************************/
-#define DEBUG
-
-typedef struct {
-  int PWM;
-  int DIR;
-  int CS;
-  int gpio_enA;
-  int gpio_enB;
-  int LevA;
-  int LevB;
-}MotorData;
-
-typedef struct {
-  MotorData A;
-  MotorData B;
-  int SLP;
-}MD02Data;
+// #define DEBUG
 
 class MotorControl {
  public:
-  MotorControl(MD02Data);
+  MotorControl(MotorPin);
+  MotorControl(MotorPin, int);
   ~MotorControl();
 
  public:
   // variable
-  MD02Data DevCmd;
+  MotorPin Cmd;
 
   // function
-  void setSpeed(float, float);
-  // TODO : add get enc value functionz
-  int64_t getEnc();
+  void setDevSLP(int);
+  void setGlitch(int);
+
+  //FIXME : pigpio Lib not found gpio read analog value
+  void getCSValue();
+
+  void setSpeed(float);
+  // TODO : add get enc value function
+
   // TODO : add enc read function
   void readEnc();
+
 
  private:
   // variable
   int pi;
-  MD02Data DevPin;
+  int SLP_pin;
+  MotorPin Pin;
+  // EncoderData 
   int glitch = 1000;
-
+  int CS;
+  int cd_id_a;
+  int cd_id_b;
   // function
+
   void init();
   void clear();
-  void setPWM(MotorData, MotorData, float);
+
+#ifdef DEBUG
+  void Pin_printf(const char* , int, int);
+#endif
+
 };
 
 #endif // MotorControl_H

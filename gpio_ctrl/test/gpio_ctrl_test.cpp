@@ -29,7 +29,8 @@ int main(int argc, char **argv){
   set_glitch_filter(pi, 23, 1000);
   set_mode(pi, 24, PI_INPUT);
   set_glitch_filter(pi, 24, 1000);
-
+  set_mode(pi, 10, PI_OUTPUT);
+  set_pull_up_down(pi, 10, PI_PUD_UP);
   while(1){
     int cb = callback_ex(pi, 23, EITHER_EDGE, EncCallBack,rr);
   }
