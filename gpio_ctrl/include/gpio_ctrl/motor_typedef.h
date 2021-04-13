@@ -9,11 +9,9 @@ typedef struct {
 }MotorPin;
 
 typedef struct {
-  int gpio_enA;
   int LevA;
-  int gpio_enB;
   int LevB;
-
+  int Status;
 }EncoderData;
 
 #endif // MotorTypedef_H
