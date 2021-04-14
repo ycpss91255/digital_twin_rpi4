@@ -11,7 +11,7 @@ typedef struct {
 typedef struct {
   int LevA;
   int LevB;
-  int Status;
+  int Step;
 }EncoderData;
 
 #endif // MotorTypedef_H
