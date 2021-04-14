@@ -1,6 +1,7 @@
 /*******************************
  ** Include system header files
  ******************************/
+#include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -22,71 +23,77 @@
 #include <pigpiod_if2.h>
 
 #include "gpio_ctrl/motor_typedef.h"
+#include "gpio_ctrl/node_handle.h"
 /*******************************
  * Define
  ******************************/
 // #define DEBUG
-
-MotorPin Pin;
-MotorPin Cmd;
-EncoderData *FBData = (EncoderData *)malloc(sizeof(*FBData));
 int pi;
-// enc callback functuin param
+std::string node_name;
+MotorPin Pin;
 int SLP_Pin;
 int glitch = 500;
-int CS;
+MotorPin Cmd;
 int cb_id_a = -1;
 int cb_id_b = -1;
-bool SLP_sw;
+EncoderData *FBData = (EncoderData *)malloc(sizeof(*FBData));
+
+float WheelDiameter = 0.038 * M_PI;  // m
+float EncoderSum = 102.08;
+// float target = 0;
+
+int previous_error = 0;
+// float integral = 0;
 
 void init();
-void init(int);
 void clear();
-void clear(bool);
-
+uint64_t getNum(char *str, int *err);
+void usage();
+void ParamHandle(int, char **);
 void setGlitch(int);
 void setSpeed(float);
-void readEnc();
 void EncCallBack(int, unsigned, unsigned, uint32_t, void *);
+void setPos(float, float, float);
 
-// FIXME : pigpio Lib not found gpio read analog value
-void getCSValue();
+// FIXME : wirte a comment
+// BUG : pigpio Lib not found gpio read analog value
+// void getCSValue();
 
+float value_map(float);
 #ifdef DEBUG
 void Pin_printf(const char *, int, int);
 #endif
 
 int main(int argc, char **argv) {
   // TODO : add rosparam get and cmd get function
-  Pin.DIR = 14;
-  Pin.PWM = 15;
-  Pin.CS = 18;
-  Pin.gpio_enA = 23;
-  Pin.gpio_enB = 24;
-  SLP_Pin = 12;
-  SLP_sw = true;
+  // Pin.DIR = 14;
+  // Pin.PWM = 15;
+  // Pin.CS = 18;
+  // Pin.gpio_enA = 23;
+  // Pin.gpio_enB = 24;
+  // SLP_Pin = 12;
+  ParamHandle(argc, argv);
 
-  if(SLP_sw) init(SLP_Pin);
-  else init();
+  init();
+  MotorNodeHandle Node(argc, argv, node_name);
+
+  // printf()
+
   printf("init\n");
-  // setGlitch(500);
 
-  if(argc != 2) {
-    printf("please input param!\n");
-    if(SLP_sw) clear(SLP_Pin);
-    else clear();
-  }
-  else {
-    float speed = (float)strtod(argv[1],NULL);
-    setSpeed(speed);
-    while (1){
-      // usleep(1000);
-    }
-  }
+  // // TODO : target -> ros topic
+  // float target = (float)strtod(argv[1], NULL);
+  // // TODO : test Kp,Kd param value
+  // float Kp = (float)strtod(argv[2], NULL);
+  // float Kd = (float)strtod(argv[3], NULL);
+  //   while (1) {
+  //     // setPos(target, Kp, Kd);
+  //     usleep(1000);
 
-  if(SLP_sw) clear(SLP_Pin);
-  else clear();
+  // }
 
+  clear();
+  Node.~MotorNodeHandle();
   return 0;
 }
 
@@ -186,23 +193,7 @@ void clear() {
   }
   set_glitch_filter(pi, Pin.gpio_enB, 0);
   set_glitch_filter(pi, Pin.gpio_enB, 0);
-  pigpio_stop(pi);
-}
-
-void clear(bool SLP_sw) {
-  gpio_write(pi, Pin.DIR, 0);
-  set_PWM_dutycycle(pi, Pin.PWM, 0);
-  if (cb_id_a >= 0) {
-    callback_cancel(cb_id_a);
-    cb_id_a = -1;
-  }
-  if (cb_id_b) {
-    callback_cancel(cb_id_b);
-    cb_id_b = -1;
-  }
-  set_glitch_filter(pi, Pin.gpio_enB, 0);
-  set_glitch_filter(pi, Pin.gpio_enB, 0);
-  if (SLP_sw) gpio_write(pi, SLP_Pin, 0);
+  if (SLP_Pin > 0) gpio_write(pi, SLP_Pin, 0);
   pigpio_stop(pi);
 }
 
@@ -236,25 +227,36 @@ void EncCallBack(int pi, unsigned user_gpio, unsigned level, uint32_t tick,
   if (level != PI_TIMEOUT) {
     if (user_gpio == Pin.gpio_enA) {
       FBData->LevA = level;
-      if(level == 1) Ap = true;
-      else An = true;
-    }
-    else {
+      if (level == 1)
+        Ap = true;
+      else
+        An = true;
+    } else {
       FBData->LevB = level;
-      if(level == 1) Bp = true;
-      else Bn = true;
+      if (level == 1)
+        Bp = true;
+      else
+        Bn = true;
     }
-    cw = ((Ap & !FBData->LevB)
-        | (An & FBData->LevB)
-        | (Bp & FBData->LevA)
-        | (Bn & !FBData->LevA));
+    cw = ((Ap & !FBData->LevB) | (An & FBData->LevB) | (Bp & FBData->LevA) |
+          (Bn & !FBData->LevA));
 
-    ccw = ((Ap & FBData->LevB)
-        | (An & !FBData->LevB)
-        | (Bp & !FBData->LevA)
-        | (Bn & FBData->LevA));
-      FBData->Step += (cw  - ccw);
+    ccw = ((Ap & FBData->LevB) | (An & !FBData->LevB) | (Bp & !FBData->LevA) |
+           (Bn & FBData->LevA));
+    FBData->Step += (cw - ccw);
   }
+}
+
+void setPos(float target, float Kp, float Kd) {
+  // target is m
+  // TODO : step Conversion to m
+  int EncTarget = (int)round(target / WheelDiameter * EncoderSum);
+  int error = EncTarget - FBData->Step;
+  int derivative = error - previous_error;
+  float output = Kp * (float)error + Kd * (float)derivative;
+  previous_error = error;
+
+  setSpeed(output);
 }
 
 // DEBUG pin function
@@ -263,3 +265,97 @@ void Pin_printf(const char *text, int pin, int status) {
   printf("%s Pin %d Status = %s\n", text, pin, (status == 0) ? "OK" : "Error");
 }
 #endif
+
+uint64_t getNum(char *str, int *err) {
+  uint64_t val;
+  char *endptr;
+
+  *err = 0;
+  val = strtoll(str, &endptr, 0);
+  if (*endptr) {
+    *err = 1;
+    val = -1;
+  }
+  return val;
+}
+void usage() {
+  fprintf(stderr,
+          "\n"
+          "Usage : motor_control [options] ...\n"
+          "   -N string, ROS node name\n"
+          "   -d value, DIR Pin, 0-31\n"
+          "   -p value, PWM Pin, 0-31\n"
+          "   -c value, CS  Pin, 0-31\n"
+          "   -a value, EnA Pin, 0-31\n"
+          "   -b value, EnB Pin, 0-31\n"
+          "   -s value, SLP Pin, 0-31\n"
+          "ROSRUN INPUT STYLE\n"
+          "rosrun this_pkg this_node -N node_name -d (int){gpio DIR} ... \n\n");
+}
+
+void ParamHandle(int argc, char **argv) {
+  // node name, Pin , SLP Pin
+  int opt, err, i;
+  // rosrun and roslaunch
+  if ((argc != 15) && (argc != 17))
+    usage();
+  else
+    while ((opt = getopt(argc, argv, "N:d:p:c:a:b:s:")) != -1) switch (opt) {
+        case 'N':
+          node_name.assign(optarg);
+          break;
+
+        case 'd':
+          i = getNum(optarg, &err);
+          if ((i >= 0) && (i <= 31))
+            Pin.DIR = i;
+          else
+            printf("invalid -d option %s", optarg);
+          break;
+
+        case 'p':
+          i = getNum(optarg, &err);
+          if ((i >= 0) && (i <= 31))
+            Pin.PWM = i;
+          else
+            printf("invalid -p option %s", optarg);
+          break;
+
+        case 'c':
+          i = getNum(optarg, &err);
+          if ((i >= 0) && (i <= 31))
+            Pin.CS = i;
+          else
+            printf("invalid -c option %s", optarg);
+          break;
+
+        case 'a':
+          i = getNum(optarg, &err);
+          if ((i >= 0) && (i <= 31))
+            Pin.gpio_enA = i;
+          else
+            printf("invalid -a option %s", optarg);
+
+          break;
+        case 'b':
+          i = getNum(optarg, &err);
+          if ((i >= 0) && (i <= 31))
+            Pin.gpio_enB = i;
+          else
+            printf("invalid -b option %s", optarg);
+          break;
+
+        case 's':
+          i = getNum(optarg, &err);
+          if ((i >= 0) && (i <= 31))
+            SLP_Pin = i;
+          else
+            printf("invalid -s option %s", optarg);
+          break;
+
+        default:
+          usage();
+          clear();
+          exit(EXIT_FAILURE);
+      }
+}
