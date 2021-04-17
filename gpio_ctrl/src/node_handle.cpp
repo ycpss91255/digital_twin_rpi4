@@ -14,19 +14,12 @@ MotorNodeHandle::~MotorNodeHandle() {
 void MotorNodeHandle::init(std::string NodeName) {
   this->n = new ros::NodeHandle();
 
-  std::string MotorPosTopicName = NodeName + "/motor_pos";
+  std::string MotorPosTopicName = NodeName + "/cmd_pos";
   std::string MotorFBTopicName = NodeName + "/motorFB";
 
   MotorFB_pub = n->advertise<std_msgs::Float32>(MotorFBTopicName, 100);
   MotorPos_sub = n->subscribe<std_msgs::Float32>(
       MotorPosTopicName, 100, &MotorNodeHandle::CmdPosBack, this);
-
-#ifdef ADJUST
-  std::string CurrentPosTopicName = NodeName + "/current_pos";
-  std::string TargetPosMotorFBTopicName = NodeName + "/target_pos";
-  CurrentPos_pub = n->advertise<std_msgs::Float32>(CurrentPosTopicName, 100);
-  TargetPos_pub = n->advertise<std_msgs::Float32>(TargetPosMotorFBTopicName, 100);
-#endif
 
 #ifdef DEBUG
   printf("Motion_nodeHandle(DEBUG)\n");
@@ -34,7 +27,8 @@ void MotorNodeHandle::init(std::string NodeName) {
 }
 
 void MotorNodeHandle::CmdPosBack(const std_msgs::Float32::ConstPtr& msg) {
-  printf("123\n");
+  CmdPos = msg->data;
+  printf("%f\n",msg->data);
 }
 
 void MotorNodeHandle::pubMotorFB(float feedback) {

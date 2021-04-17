@@ -27,13 +27,10 @@ class MotorNodeHandle {
 
  public:
   // variable
-
+  float CmdPos = 0;
   // function
   void pubMotorFB(float);
-#ifdef ADJUST
-  void pubCurrentPos(float);
-  void pubTargetPos(float);
-#endif
+
 
  private:
   // variable

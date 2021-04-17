@@ -96,9 +96,8 @@ int main(int argc, char **argv) {
   // TODO : wait done Feed Back Control
 #ifndef ADJUST
   while (ros::ok()) {
-    
-    PosControl(1020, Kp, Kd);
-
+    PosControl(Node.CmdPos, Kp, Kd);
+    ros::spinOnce();
   }
 #else
   int i = 0;
