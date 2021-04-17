@@ -16,8 +16,7 @@
     <arg name="enb"/>
     <arg name="slp" default="-1"/> -->
 
-
-  <group ns="$(arg node_name)">
+  <group>
     <node
       pkg="gpio_ctrl"
       type="motor_control"
