@@ -28,7 +28,6 @@ void MotorNodeHandle::init(std::string NodeName) {
 
 void MotorNodeHandle::CmdPosBack(const std_msgs::Float32::ConstPtr& msg) {
   CmdPos = msg->data;
-  printf("%f\n",msg->data);
 }
 
 void MotorNodeHandle::pubMotorFB(float feedback) {
