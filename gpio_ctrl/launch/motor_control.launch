@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<launch>
+  <arg name="node_name" default="wheel"/>
+  <arg name="dir" default="14"/>
+  <arg name="pwm" default="15"/>
+  <arg name="cs" default="18"/>
+  <arg name="ena" default="23"/>
+  <arg name="enb" default="24"/>
+  <arg name="slp" default="12"/>
+
+<!-- HACK : Maybe it is better to use the following method? -->
+    <!-- <arg name="dir"/>
+    <arg name="pwm"/>
+    <arg name="cs"/>
+    <arg name="ena"/>
+    <arg name="enb"/>
+    <arg name="slp" default="-1"/> -->
+
+  <group>
+    <node
+      pkg="gpio_ctrl"
+      type="motor_control"
+      name="$(arg node_name)"
+      output="screen"
+      respawn="false"
+      respawn_delay="0"
+      args="
+        -N $(arg node_name)
+        -d $(arg dir)
+        -p $(arg pwm)
+        -c $(arg cs)
+        -a $(arg ena)
+        -b $(arg enb)
+        -s $(arg slp)"/>
+  </group>
+</launch>
