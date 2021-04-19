@@ -25,7 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       nano vim \
       # work-tools
       python3-pip python3-catkin-tools python3-setuptools \
-      python3-gpiozero \
+      python3-dev python3-gpiozero \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 

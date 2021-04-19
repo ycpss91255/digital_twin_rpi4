@@ -101,7 +101,6 @@ int main(int argc, char **argv) {
   }
 #else
   int i = 0;
-
   clock_t start = clock(), end;
   int loop_num = 600;
   float postarget = 102;

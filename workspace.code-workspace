@@ -7,6 +7,10 @@
 	"settings": {
 		"python.autoComplete.extraPaths": [
 			"/opt/ros/noetic/lib/python3/dist-packages"
-		]
+		],
+		"cSpell.words": [
+			"gpio"
+		],
+		"ros.distro": "noetic"
 	}
 }
