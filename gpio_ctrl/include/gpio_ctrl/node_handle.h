@@ -16,6 +16,7 @@
 /*******************************
  ** Include msg header files
  ******************************/
+#include "gpio_ctrl/MotorCmdFB.h"
 #include "std_msgs/Float64.h"
 /*******************************
  * Define
@@ -33,6 +34,7 @@ class MotorNodeHandle {
   // function
   vector<int> getPin();
   void pubMotorFB(float);
+  void pubMotorCmdFB(gpio_ctrl::MotorCmdFB);
 
  private:
   // variable
@@ -40,6 +42,7 @@ class MotorNodeHandle {
   string WheelNS;
 
   ros::Publisher MotorFB_pub;
+  ros::Publisher MotorCmdFB_pub;
   ros::Subscriber MotorPos_sub;
   // function
   void init();

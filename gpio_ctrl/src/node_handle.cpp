@@ -18,6 +18,8 @@ void MotorNodeHandle::init() {
 
   MotorFB_pub =
       n->advertise<std_msgs::Float64>((this->WheelNS + "/motorFB"), 100);
+  MotorCmdFB_pub =
+      n->advertise<gpio_ctrl::MotorCmdFB>((this->WheelNS + "/motorCmdFB"), 100);
   MotorPos_sub = n->subscribe<std_msgs::Float64>(
       (this->WheelNS + "/cmd_pos"), 1, &MotorNodeHandle::CmdPosBack, this);
 }
@@ -42,4 +44,11 @@ void MotorNodeHandle::pubMotorFB(float feedback) {
   std_msgs::Float64 msg;
   msg.data = feedback;
   MotorFB_pub.publish(msg);
+}
+
+void MotorNodeHandle::pubMotorCmdFB(gpio_ctrl::MotorCmdFB Cmd) {
+  gpio_ctrl::MotorCmdFB msg;
+  msg.dir = Cmd.dir;
+  msg.pwm = Cmd.pwm;
+  MotorCmdFB_pub.publish(msg);
 }

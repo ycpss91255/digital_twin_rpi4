@@ -112,6 +112,7 @@ int main(int argc, char **argv) {
       PosControl(Node.CmdPos, Kp, Kd);
     }
     Node.pubMotorFB(FBData->Step);
+    Node.pubMotorCmdFB(Cmd);
     ros::spinOnce();
   }
 #else
