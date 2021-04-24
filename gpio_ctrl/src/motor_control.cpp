@@ -93,12 +93,12 @@ int main(int argc, char **argv) {
   ParamHandle(argc, argv);
   MotorNodeHandle Node(argc, argv, robot_ns, node_name);
   init();
-
-  // TODO : wait done Feed Back Control
+  bool feedback = true;
 #ifndef ADJUST
   while (ros::ok()) {
-    // TODO : CmdPos is m
-    PosControl(Node.CmdPos, Kp, Kd);
+    // TODO : FB mode
+    if (feedback != true) PosControl(Node.CmdPos, Kp, Kd);
+    printf("int = %f\n", FBData->Step);
     Node.pubMotorFB(FBData->Step);
     ros::spinOnce();
   }
@@ -226,7 +226,6 @@ void ParamHandle(int argc, char **argv) {
     while ((opt = getopt(argc, argv, "N:n:d:p:c:a:b:s:")) != -1) switch (opt) {
         case 'N':
           robot_ns.assign(optarg);
-          printf("robot_ns = %s\n", robot_ns.c_str());
           break;
 
         case 'n':

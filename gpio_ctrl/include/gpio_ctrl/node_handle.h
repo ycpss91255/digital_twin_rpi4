@@ -14,7 +14,7 @@
 /*******************************
  ** Include msg header files
  ******************************/
-#include "std_msgs/Float32.h"
+#include "std_msgs/Float64.h"
 /*******************************
  * Define
  ******************************/
@@ -41,7 +41,7 @@ class MotorNodeHandle {
   std::string node_name;
   // function
   void init();
-  void CmdPosBack(const std_msgs::Float32::ConstPtr &);
+  void CmdPosBack(const std_msgs::Float64::ConstPtr &);
 };
 
 #endif  // NodeHandle_H
