@@ -93,12 +93,11 @@ int main(int argc, char **argv) {
   ParamHandle(argc, argv);
   MotorNodeHandle Node(argc, argv, robot_ns, node_name);
   init();
-  bool feedback = true;
+  bool feedback = 0;
 #ifndef ADJUST
   while (ros::ok()) {
     // TODO : FB mode
     if (feedback != true) PosControl(Node.CmdPos, Kp, Kd);
-    printf("int = %f\n", FBData->Step);
     Node.pubMotorFB(FBData->Step);
     ros::spinOnce();
   }
