@@ -22,7 +22,7 @@
 
 class MotorNodeHandle {
  public:
-  MotorNodeHandle(int, char **, std::string);
+  MotorNodeHandle(int, char **, std::string, std::string);
   ~MotorNodeHandle();
 
  public:
@@ -37,9 +37,10 @@ class MotorNodeHandle {
   ros::NodeHandle *n;
   ros::Publisher MotorFB_pub;
   ros::Subscriber MotorPos_sub;
+  std::string robot_ns;
   std::string node_name;
   // function
-  void init(std::string);
+  void init();
   void CmdPosBack(const std_msgs::Float32::ConstPtr &);
 };
 

@@ -57,6 +57,7 @@ typedef struct {
 } EncoderData;
 
 int pi;
+std::string robot_ns;
 std::string node_name;
 MotorPin Pin;
 int SLP_Pin;
@@ -90,13 +91,15 @@ void Pin_printf(const char *, int, int);
 
 int main(int argc, char **argv) {
   ParamHandle(argc, argv);
-  MotorNodeHandle Node(argc, argv, node_name);
+  MotorNodeHandle Node(argc, argv, robot_ns, node_name);
   init();
 
   // TODO : wait done Feed Back Control
 #ifndef ADJUST
   while (ros::ok()) {
+    // TODO : CmdPos is m
     PosControl(Node.CmdPos, Kp, Kd);
+    Node.pubMotorFB(FBData->Step);
     ros::spinOnce();
   }
 #else
@@ -217,11 +220,16 @@ void ParamHandle(int argc, char **argv) {
   // node name, Pin , SLP Pin
   int opt, err, i;
   // rosrun and roslaunch
-  if ((argc != 15) && (argc != 17))
+  if ((argc != 17) && (argc != 19))
     usage();
   else
-    while ((opt = getopt(argc, argv, "N:d:p:c:a:b:s:")) != -1) switch (opt) {
+    while ((opt = getopt(argc, argv, "N:n:d:p:c:a:b:s:")) != -1) switch (opt) {
         case 'N':
+          robot_ns.assign(optarg);
+          printf("robot_ns = %s\n", robot_ns.c_str());
+          break;
+
+        case 'n':
           node_name.assign(optarg);
           break;
 
@@ -322,6 +330,8 @@ void EncCallBack(int pi, unsigned user_gpio, unsigned level, uint32_t tick,
 }
 
 void setENS(bool dir, int ens) {
+  // get up to 1260 pulses in 1 second
+  // will not move if the pulse wave is lower than 125
   Cmd.DIR = dir;
   ens = abs(ens);
   Cmd.PWM = (ens < 125)     ? 0
