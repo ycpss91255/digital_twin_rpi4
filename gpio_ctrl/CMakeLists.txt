@@ -12,7 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 add_message_files(
   FILES
-  MotorFB.msg
+  MotorCmdFB.msg
 )
 generate_messages(
   DEPENDENCIES
@@ -37,4 +37,3 @@ include_directories(
 )
 
 add_subdirectory(src)
-# add_subdirectory(test)

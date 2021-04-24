@@ -1,6 +1,7 @@
 /*******************************
  ** Include system header files
  ******************************/
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -9,6 +10,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
+#include <vector>
 /*******************************
  * Include ROS header files
  ******************************/
@@ -16,7 +18,7 @@
 /*******************************
  ** Include msg header files
  ******************************/
-#include "gpio_ctrl/MotorFB.h"
+#include "gpio_ctrl/MotorCmdFB.h"
 /*******************************
  ** Include header files
  ******************************/
@@ -28,6 +30,59 @@
  ******************************/
 // #define ADJUST
 // #define DEBUG
+/*******************************
+ * Base param
+ ******************************/
+int pi;
+std::string RobotName;
+uint64_t WheelNum;
+int glitch = 500;
+typedef struct {
+  int PWM;
+  int DIR;
+  int CS;
+  int enA;
+  int enB;
+} MotorPin;
+MotorPin Pin;
+int SLP_Pin;
+bool Mode;
+/*******************************
+ * Gpio feed back param
+ ******************************/
+typedef struct {
+  int LevA;
+  int LevB;
+  float Step;
+  float Current;
+} EncoderData;
+EncoderData *FBData = (EncoderData *)malloc(sizeof(*FBData));
+int cb_id_a = -1;
+int cb_id_b = -1;
+/*******************************
+ * Pos control param
+ ******************************/
+// TODO : ros topic function
+gpio_ctrl::MotorCmdFB Cmd;
+float WheelPerimeter = 0.038 * M_PI;  // m
+float Kp = 20;
+float Kd = 0;
+float EncoderSum = 102.08;
+float previous_error = 0;
+
+/*******************************
+ * Declare function
+ ******************************/
+void init(vector<int>);
+void clear();
+void usage();
+void ParamHandle(int, char **);
+void EncCallBack(int, unsigned, unsigned, uint32_t, void *);
+void setENS(bool, int);  // enc/s
+void PosControl(float, float, float);
+
+// BUG : pigpio Lib not found gpio read analog value
+// void getCSValue();
 
 #ifdef ADJUST
 #include <ctime>
@@ -38,52 +93,10 @@
 
 std::vector<float> current, target;
 
+void setGlitch(int);
 void getLine(float, float);
 void AdjustPIDParam();
 #endif
-
-typedef struct {
-  int PWM;
-  int DIR;
-  int CS;
-  int gpio_enA;
-  int gpio_enB;
-} MotorPin;
-typedef struct {
-  int LevA;
-  int LevB;
-  float Step;
-  float Current;
-} EncoderData;
-
-int pi;
-std::string robot_ns;
-std::string node_name;
-MotorPin Pin;
-int SLP_Pin;
-int glitch = 500;
-MotorPin Cmd;
-int cb_id_a = -1;
-int cb_id_b = -1;
-EncoderData *FBData = (EncoderData *)malloc(sizeof(*FBData));
-float WheelPerimeter = 0.038 * M_PI;  // m
-float Kp = 20;
-float Kd = 0;
-float EncoderSum = 102.08;
-float previous_error = 0;
-
-void init();
-void clear();
-uint64_t getNum(char *, int *);
-void usage();
-void ParamHandle(int, char **);
-void setGlitch(int);
-void EncCallBack(int, unsigned, unsigned, uint32_t, void *);
-void setENS(bool, int);  // enc/s
-void PosControl(float, float, float);
-// FIXME : wirte a comment
-// BUG : pigpio Lib not found gpio read analog value
-// void getCSValue();
 
 #ifdef DEBUG
 void Pin_printf(const char *, int, int);
@@ -91,13 +104,13 @@ void Pin_printf(const char *, int, int);
 
 int main(int argc, char **argv) {
   ParamHandle(argc, argv);
-  MotorNodeHandle Node(argc, argv, robot_ns, node_name);
-  init();
-  bool feedback = 0;
+  MotorNodeHandle Node(argc, argv, RobotName, WheelNum);
+  init(Node.getPin());
 #ifndef ADJUST
   while (ros::ok()) {
-    // TODO : FB mode
-    if (feedback != true) PosControl(Node.CmdPos, Kp, Kd);
+    if (!Mode) {
+      PosControl(Node.CmdPos, Kp, Kd);
+    }
     Node.pubMotorFB(FBData->Step);
     ros::spinOnce();
   }
@@ -120,14 +133,19 @@ int main(int argc, char **argv) {
   AdjustPIDParam();
 #endif
   clear();
-  // Node.~MotorNodeHandle();
-  // exit(EXIT_SUCCESS);
   return 0;
 }
 
-// Library
-void init() {
+// function
+void init(vector<int> Pin_v) {
   pi = pigpio_start(0, 0);
+
+  Pin.DIR = Pin_v.at(1);
+  Pin.PWM = Pin_v.at(2);
+  Pin.CS = Pin_v.at(3);
+  Pin.enA = Pin_v.at(4);
+  Pin.enB = Pin_v.at(5);
+  SLP_Pin = Pin_v.at(6);
 
   if (pi < 0) {
     printf("Can't connect to pigpio daemon\n");
@@ -139,31 +157,33 @@ void init() {
     PinStatus.DIR = set_mode(pi, Pin.DIR, PI_OUTPUT);
     PinStatus.CS = set_mode(pi, Pin.CS, PI_INPUT);
 
-    PinStatus.gpio_enA = set_mode(pi, Pin.gpio_enA, PI_INPUT);
-    PinStatus.gpio_enB = set_mode(pi, Pin.gpio_enB, PI_INPUT);
-    PinStatus.gpio_enA |= set_pull_up_down(pi, Pin.gpio_enA, PI_PUD_UP);
-    PinStatus.gpio_enB |= set_pull_up_down(pi, Pin.gpio_enB, PI_PUD_UP);
-    PinStatus.gpio_enA |= set_glitch_filter(pi, Pin.gpio_enA, glitch);
-    PinStatus.gpio_enB |= set_glitch_filter(pi, Pin.gpio_enB, glitch);
-    int SLPStatus = -1;
-    if (SLP_Pin > 0) {
+    PinStatus.enA = set_mode(pi, Pin.enA, PI_INPUT);
+    PinStatus.enB = set_mode(pi, Pin.enB, PI_INPUT);
+    PinStatus.enA |= set_pull_up_down(pi, Pin.enA, PI_PUD_UP);
+    PinStatus.enB |= set_pull_up_down(pi, Pin.enB, PI_PUD_UP);
+    PinStatus.enA |= set_glitch_filter(pi, Pin.enA, glitch);
+    PinStatus.enB |= set_glitch_filter(pi, Pin.enB, glitch);
+    int SLPStatus;
+
+    // slp_sw_value
+    if (Pin_v.at(0)) {
       SLPStatus = set_mode(pi, SLP_Pin, PI_OUTPUT);
       SLPStatus |= gpio_write(pi, SLP_Pin, 1);
     }
-    cb_id_a = callback_ex(pi, Pin.gpio_enA, EITHER_EDGE, EncCallBack, FBData);
-    cb_id_b = callback_ex(pi, Pin.gpio_enB, EITHER_EDGE, EncCallBack, FBData);
+    cb_id_a = callback_ex(pi, Pin.enA, EITHER_EDGE, EncCallBack, FBData);
+    cb_id_b = callback_ex(pi, Pin.enB, EITHER_EDGE, EncCallBack, FBData);
 
 #ifdef DEBUG
     Pin_printf("PWM", Pin.PWM, PinStatus.PWM);
     Pin_printf("DIR", Pin.DIR, PinStatus.DIR);
     Pin_printf("CS", Pin.CS, PinStatus.CS);
-    Pin_printf("GPIO_ENA", Pin.gpio_enA, PinStatus.gpio_enA);
-    Pin_printf("GPIO_ENB", Pin.gpio_enB, PinStatus.gpio_enB);
-    if (SLP_Pin > 0) Pin_printf("SLP", SLP_Pin, SLPStatus);
+    Pin_printf("GPIO_ENA", Pin.enA, PinStatus.enA);
+    Pin_printf("GPIO_ENB", Pin.enB, PinStatus.enB);
+    if (Pin_v.at(0)) Pin_printf("SLP", SLP_Pin, SLPStatus);
 #endif
 
-    if ((PinStatus.PWM || PinStatus.DIR || PinStatus.CS || PinStatus.gpio_enA ||
-         PinStatus.gpio_enB) != 0) {
+    if ((PinStatus.PWM || PinStatus.DIR || PinStatus.CS || PinStatus.enA ||
+         PinStatus.enB) != 0) {
       printf("Set up pin error\n");
       clear();
     }
@@ -181,102 +201,37 @@ void clear() {
     callback_cancel(cb_id_b);
     cb_id_b = -1;
   }
-  set_glitch_filter(pi, Pin.gpio_enB, 0);
-  set_glitch_filter(pi, Pin.gpio_enB, 0);
+  set_glitch_filter(pi, Pin.enB, 0);
+  set_glitch_filter(pi, Pin.enB, 0);
   if (SLP_Pin > 0) gpio_write(pi, SLP_Pin, 0);
   pigpio_stop(pi);
-}
-
-uint64_t getNum(char *str, int *err) {
-  uint64_t val;
-  char *endptr;
-
-  *err = 0;
-  val = strtoll(str, &endptr, 0);
-  if (*endptr) {
-    *err = 1;
-    val = -1;
-  }
-  return val;
 }
 
 void usage() {
   fprintf(stderr,
           "\n"
           "Usage : motor_control [options] ...\n"
-          "   -N string, ROS node name\n"
-          "   -d value, DIR Pin, 0-31\n"
-          "   -p value, PWM Pin, 0-31\n"
-          "   -c value, CS  Pin, 0-31\n"
-          "   -a value, EnA Pin, 0-31\n"
-          "   -b value, EnB Pin, 0-31\n"
-          "   -s value, SLP Pin, 0-31\n"
-          "ROSRUN INPUT STYLE\n"
-          "rosrun this_pkg this_node -N node_name -d (int){gpio DIR} ... \n\n");
+          "   -r string, robot name\n"
+          "   -n value, wheel num\n"
+          "   -m boolean, 0 : PosControl Mode, 1 : FeedBack Mode\n");
 }
 
 void ParamHandle(int argc, char **argv) {
-  // node name, Pin , SLP Pin
-  int opt, err, i;
-  // rosrun and roslaunch
-  if ((argc != 17) && (argc != 19))
+  if (argc != 9)
     usage();
-  else
-    while ((opt = getopt(argc, argv, "N:n:d:p:c:a:b:s:")) != -1) switch (opt) {
-        case 'N':
-          robot_ns.assign(optarg);
+  else {
+    int opt;
+    while ((opt = getopt(argc, argv, "r:n:m:")) != -1) switch (opt) {
+        case 'r':
+          RobotName.assign(optarg);
           break;
 
         case 'n':
-          node_name.assign(optarg);
+          WheelNum = strtol(optarg, NULL, 0);
           break;
 
-        case 'd':
-          i = getNum(optarg, &err);
-          if ((i >= 0) && (i <= 31))
-            Pin.DIR = i;
-          else
-            printf("invalid -d option %s", optarg);
-          break;
-
-        case 'p':
-          i = getNum(optarg, &err);
-          if ((i >= 0) && (i <= 31))
-            Pin.PWM = i;
-          else
-            printf("invalid -p option %s", optarg);
-          break;
-
-        case 'c':
-          i = getNum(optarg, &err);
-          if ((i >= 0) && (i <= 31))
-            Pin.CS = i;
-          else
-            printf("invalid -c option %s", optarg);
-          break;
-
-        case 'a':
-          i = getNum(optarg, &err);
-          if ((i >= 0) && (i <= 31))
-            Pin.gpio_enA = i;
-          else
-            printf("invalid -a option %s", optarg);
-
-          break;
-        case 'b':
-          i = getNum(optarg, &err);
-          if ((i >= 0) && (i <= 31))
-            Pin.gpio_enB = i;
-          else
-            printf("invalid -b option %s", optarg);
-          break;
-
-        case 's':
-          i = getNum(optarg, &err);
-          if ((i >= 0) && (i <= 31))
-            SLP_Pin = i;
-          else
-            printf("invalid -s option %s", optarg);
+        case 'm':
+          Mode = strtol(optarg, NULL, 0);
           break;
 
         default:
@@ -284,13 +239,6 @@ void ParamHandle(int argc, char **argv) {
           clear();
           exit(EXIT_FAILURE);
       }
-}
-
-void setGlitch(int glitch_v) {
-  if (glitch_v >= 0 && (glitch_v != glitch)) {
-    glitch = glitch_v;
-    set_glitch_filter(pi, Pin.gpio_enA, glitch);
-    set_glitch_filter(pi, Pin.gpio_enB, glitch);
   }
 }
 
@@ -301,7 +249,7 @@ void EncCallBack(int pi, unsigned user_gpio, unsigned level, uint32_t tick,
   bool Ap = false, An = false, Bp = false,
        Bn = false;  // n = negative p = positive
   if (level != PI_TIMEOUT) {
-    if (user_gpio == Pin.gpio_enA) {
+    if (user_gpio == Pin.enA) {
       FBData->LevA = level;
       if (level == 1)
         Ap = true;
@@ -328,16 +276,16 @@ void EncCallBack(int pi, unsigned user_gpio, unsigned level, uint32_t tick,
 }
 
 void setENS(bool dir, int ens) {
-  // get up to 1260 pulses in 1 second
+  // get up to 1250 pulses in 1 second
   // will not move if the pulse wave is lower than 125
-  Cmd.DIR = dir;
+  Cmd.dir = dir;
   ens = abs(ens);
-  Cmd.PWM = (ens < 125)     ? 0
+  Cmd.pwm = (ens < 125)     ? 0
             : (ens >= 1250) ? 255
                             : round(ens / 4.902);  // 1250(ens) to 255(gpio max)
 
-  gpio_write(pi, Pin.DIR, Cmd.DIR);
-  set_PWM_dutycycle(pi, Pin.PWM, Cmd.PWM);
+  gpio_write(pi, Pin.DIR, Cmd.dir);
+  set_PWM_dutycycle(pi, Pin.PWM, Cmd.pwm);
 }
 
 void PosControl(float target, float Kp, float Kd) {
@@ -347,13 +295,24 @@ void PosControl(float target, float Kp, float Kd) {
   previous_error = error;
   bool dir = (output <= 0) ? 0 : 1;
   setENS(dir, output);
+
 #ifdef DEBUG
-  printf("node_name = %s, error = %f, derivative = %f, output = %f\n",
-         node_name.c_str(), error, derivative, output);
+#ifdef ADJUST
+  printf("node_name = wheel%ld, error = %f, derivative = %f, output = %f\n",
+         WheelNum, error, derivative, output);
+#endif
 #endif
 }
 
 #ifdef ADJUST
+void setGlitch(int glitch_v) {
+  if (glitch_v >= 0 && (glitch_v != glitch)) {
+    glitch = glitch_v;
+    set_glitch_filter(pi, Pin.gpio_enA, glitch);
+    set_glitch_filter(pi, Pin.gpio_enB, glitch);
+  }
+}
+
 void getLine(float curr_pos, float target_pos) {
   current.push_back(curr_pos);
   target.push_back(target_pos);
@@ -363,38 +322,10 @@ void AdjustPIDParam() {
   int c_size = current.size();
   int t_size = target.size();
   if ((c_size != t_size) || c_size >= 0 || t_size >= 0) {
-    // std::vector<float> c_len, t_len;
-    // c_len.resize(c_size);
-    // t_len.resize(t_size);
-    // std::iota(c_len.begin(), c_len.end(), 1);
-    // std::iota(t_len.begin(), t_len.end(), 1);
-    // plt::clf();
-    // plt::plot(current, c_len);
-    // plt::plot(target, t_len);
-    // plt::title("Sample figure");
-    // plt::legend();
-
     plt::plot(current);
     plt::plot(target);
     plt::show();
   }
-
-  // // Clear previous plot
-  // plt::clf();
-  // // Plot line from given x and y data. Color is selected automatically.
-  // plt::plot(x, y);
-  // // Plot a line whose name will show up as "log(x)" in the legend.
-  // plt::named_plot("log(x)", x, z);
-
-  // // Set x-axis to interval [0,1000000]
-  // plt::xlim(0, n * n);
-
-  // // Add graph title
-  // plt::title("Sample figure");
-  // // Enable legend.
-  // plt::legend();
-  // // Display plot continuously
-  // plt::pause(0.01);
 }
 #endif
 

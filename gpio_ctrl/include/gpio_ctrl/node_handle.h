@@ -3,10 +3,12 @@
 /*******************************
  * Include system header files
  ******************************/
+#include <stdint.h>
 #include <string.h>
 
 #include <cstdio>
 #include <iostream>
+#include <vector>
 /*******************************
  * Include ROS header files
  ******************************/
@@ -19,26 +21,26 @@
  * Define
  ******************************/
 // #define DEBUG
-
+using namespace std;
 class MotorNodeHandle {
  public:
-  MotorNodeHandle(int, char **, std::string, std::string);
+  MotorNodeHandle(int, char **, string, uint64_t);
   ~MotorNodeHandle();
 
  public:
   // variable
   float CmdPos = 0;
   // function
+  vector<int> getPin();
   void pubMotorFB(float);
-
 
  private:
   // variable
   ros::NodeHandle *n;
+  string WheelNS;
+
   ros::Publisher MotorFB_pub;
   ros::Subscriber MotorPos_sub;
-  std::string robot_ns;
-  std::string node_name;
   // function
   void init();
   void CmdPosBack(const std_msgs::Float64::ConstPtr &);

@@ -1,0 +1,9 @@
+wheel1:
+  slp_sw: true
+  pin:
+    dir: 14
+    pwm: 15
+    cs: 18
+    ena: 23
+    enb: 24
+    slp: 12

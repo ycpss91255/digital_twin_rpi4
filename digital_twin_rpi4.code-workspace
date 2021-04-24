@@ -2,10 +2,6 @@
 	"folders": [
 		{
 			"path": ".."
-		},
-		{
-			"name": "src @ 83669df",
-			"uri": "gitlens://83669df/home/cyc/remote_file/rpi4/digital_twin_rpi4_ws/src?{\"path\":\"/home/cyc/remote_file/rpi4/digital_twin_rpi4_ws/src\",\"ref\":\"83669df9f35aaf58ed65ea6725852b1fac829167\",\"repoPath\":\"/home/cyc/remote_file/rpi4/digital_twin_rpi4_ws/src\"}"
 		}
 	],
 	"settings": {
@@ -15,6 +11,10 @@
 		"cSpell.words": [
 			"gpio"
 		],
-		"ros.distro": "noetic"
+		"ros.distro": "noetic",
+		"files.associations": {
+			"*.gazebo": "xml",
+			"sstream": "cpp"
+		}
 	}
 }
