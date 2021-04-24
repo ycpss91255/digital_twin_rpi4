@@ -1,5 +1,5 @@
 # syntax = docker/dockerfile:experimental
-FROM ros:noetic-ros-base
+FROM ros:noetic-ros-base-focal
 
 # Arguments
 ARG USER=initial
@@ -20,9 +20,13 @@ RUN groupadd --gid ${GID} ${GROUP} \
 RUN sed -i 's@archive.ubuntu.com@ftp.tku.edu.tw/@g' /etc/apt/sources.list
 # Install packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      sudo net-tools htop git rsync wget zip unzip \
-      byobu zsh terminator \
+      sudo net-tools htop wget zip unzip \
+      git rsync \
+      # edit tool
       nano vim \
+      # shell
+      byobu zsh terminator \
+      gnome-terminal libcanberra-gtk3-module \
       # work-tools
       python3-pip python3-catkin-tools python3-setuptools \
       python3-dev python3-gpiozero \
