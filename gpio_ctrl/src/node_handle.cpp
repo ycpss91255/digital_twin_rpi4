@@ -17,10 +17,10 @@ void MotorNodeHandle::init() {
   this->n = new ros::NodeHandle();
 
   MotorFB_pub =
-      n->advertise<std_msgs::Float64>((this->WheelNS + "/motorFB"), 100);
+      this->n->advertise<std_msgs::Float64>((this->WheelNS + "/motorFB"), 100);
   MotorCmdFB_pub =
-      n->advertise<gpio_ctrl::MotorCmdFB>((this->WheelNS + "/motorCmdFB"), 100);
-  MotorPos_sub = n->subscribe<std_msgs::Float64>(
+      this->n->advertise<gpio_ctrl::MotorCmdFB>((this->WheelNS + "/motor_cmdFB"), 100);
+  MotorPos_sub = this->n->subscribe<std_msgs::Float64>(
       (this->WheelNS + "/cmd_pos"), 1, &MotorNodeHandle::CmdPosBack, this);
 }
 
@@ -29,10 +29,10 @@ vector<int> MotorNodeHandle::getPin() {
   vector<string> PinOrder = {"stp_sw", "dir", "pwm", "cs", "ena", "enb", "slp"};
   string WheelPin = this->WheelNS + "/pin/";
 
-  n->getParam((this->WheelNS + "/slp_sw"), PinData.at(0));
+  this->n->getParam((this->WheelNS + "/slp_sw"), PinData.at(0));
   for (int i = 1; i < PinOrder.size(); i++)
     if (i != PinOrder.size() || PinData.at(0))
-      n->getParam((WheelPin + PinOrder.at(i)), PinData.at(i));
+      this->n->getParam((WheelPin + PinOrder.at(i)), PinData.at(i));
   return PinData;
 }
 
