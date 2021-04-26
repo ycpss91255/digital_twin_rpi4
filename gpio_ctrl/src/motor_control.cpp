@@ -29,13 +29,17 @@
  * Define
  ******************************/
 // #define ADJUST
-// #define DEBUG
+#define DEBUG
+#define PosControlMode 0
+#define FeedBackMode 1
+#define DigitalDriveMode 2
 /*******************************
  * Base param
  ******************************/
 int pi;
 std::string RobotName;
 uint64_t WheelNum;
+int Mode;
 int glitch = 500;
 typedef struct {
   int PWM;
@@ -46,7 +50,6 @@ typedef struct {
 } MotorPin;
 MotorPin Pin;
 int SLP_Pin;
-bool Mode;
 /*******************************
  * Gpio feed back param
  ******************************/
@@ -106,10 +109,17 @@ int main(int argc, char **argv) {
   ParamHandle(argc, argv);
   MotorNodeHandle Node(argc, argv, RobotName, WheelNum);
   init(Node.getPin());
+
 #ifndef ADJUST
   while (ros::ok()) {
-    if (!Mode) {
-      PosControl(Node.CmdPos, Kp, Kd);
+    if (Mode == PosControlMode) {
+      float CmdPos = Node.getCmdPos();
+      PosControl(CmdPos, Kp, Kd);
+    }
+    else if (Mode == FeedBackMode){}
+    else if(Mode == DigitalDriveMode){
+      float CmdPos = Node.getDigitalCmdPos();
+      PosControl(CmdPos ,Kp, Kd);
     }
     Node.pubMotorFB(FBData->Step);
     Node.pubMotorCmdFB(Cmd);
@@ -164,28 +174,25 @@ void init(vector<int> Pin_v) {
     PinStatus.enB |= set_pull_up_down(pi, Pin.enB, PI_PUD_UP);
     PinStatus.enA |= set_glitch_filter(pi, Pin.enA, glitch);
     PinStatus.enB |= set_glitch_filter(pi, Pin.enB, glitch);
-    int SLPStatus;
 
+    int SLPStatus;
     // slp_sw_value
     if (Pin_v.at(0)) {
       SLPStatus = set_mode(pi, SLP_Pin, PI_OUTPUT);
       SLPStatus |= gpio_write(pi, SLP_Pin, 1);
     }
+
     cb_id_a = callback_ex(pi, Pin.enA, EITHER_EDGE, EncCallBack, FBData);
     cb_id_b = callback_ex(pi, Pin.enB, EITHER_EDGE, EncCallBack, FBData);
 
-#ifdef DEBUG
-    Pin_printf("PWM", Pin.PWM, PinStatus.PWM);
-    Pin_printf("DIR", Pin.DIR, PinStatus.DIR);
-    Pin_printf("CS", Pin.CS, PinStatus.CS);
-    Pin_printf("GPIO_ENA", Pin.enA, PinStatus.enA);
-    Pin_printf("GPIO_ENB", Pin.enB, PinStatus.enB);
-    if (Pin_v.at(0)) Pin_printf("SLP", SLP_Pin, SLPStatus);
-#endif
-
     if ((PinStatus.PWM || PinStatus.DIR || PinStatus.CS || PinStatus.enA ||
-         PinStatus.enB) != 0) {
-      printf("Set up pin error\n");
+         PinStatus.enB) != 0 || (Pin_v.at(0) && (SLPStatus != 0))) {
+      if(PinStatus.PWM) Pin_printf("PWM", Pin.PWM, PinStatus.PWM);
+      if(PinStatus.DIR) Pin_printf("DIR", Pin.DIR, PinStatus.DIR);
+      if(PinStatus.CS) Pin_printf("CS", Pin.CS, PinStatus.CS);
+      if(PinStatus.enA) Pin_printf("GPIO_ENA", Pin.enA, PinStatus.enA);
+      if(PinStatus.enB) Pin_printf("GPIO_ENB", Pin.enB, PinStatus.enB);
+      if(SLPStatus) Pin_printf("SLP", SLP_Pin, SLPStatus);
       clear();
     }
   }

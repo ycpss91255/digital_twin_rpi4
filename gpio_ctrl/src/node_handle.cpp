@@ -2,8 +2,11 @@
 
 MotorNodeHandle::MotorNodeHandle(int argc, char** argv, string RobotName,
                                  uint64_t WheelNum) {
-  string NodeName = "real_wheel" + to_string(WheelNum);
+  this->WheelNum = WheelNum;
+  this->RobotName = RobotName;
   this->WheelNS = "/real" + RobotName + "/wheel" + to_string(WheelNum);
+
+  string NodeName = "real_wheel" + to_string(WheelNum);
   ros::init(argc, argv, NodeName);
   init();
 }
@@ -22,6 +25,12 @@ void MotorNodeHandle::init() {
       this->n->advertise<gpio_ctrl::MotorCmdFB>((this->WheelNS + "/motor_cmdFB"), 100);
   MotorPos_sub = this->n->subscribe<std_msgs::Float64>(
       (this->WheelNS + "/cmd_pos"), 1, &MotorNodeHandle::CmdPosBack, this);
+
+  // Digital motor
+  string DigitalMotorPosTopicName = "/Digital" + RobotName +"/wheel" + to_string(this->WheelNum) + "/motorFB";
+  MotorPos_sub = this->n->subscribe<std_msgs::Float64>(
+    DigitalMotorPosTopicName, 1, &MotorNodeHandle::DigitalMotorPosBack, this);
+
 }
 
 vector<int> MotorNodeHandle::getPin() {
@@ -51,4 +60,16 @@ void MotorNodeHandle::pubMotorCmdFB(gpio_ctrl::MotorCmdFB Cmd) {
   msg.dir = Cmd.dir;
   msg.pwm = Cmd.pwm;
   MotorCmdFB_pub.publish(msg);
+}
+
+float MotorNodeHandle::getCmdPos(){
+  return this->CmdPos;
+}
+
+float MotorNodeHandle::getDigitalCmdPos(){
+  return this->DigitalCmdPos;
+}
+
+void MotorNodeHandle::DigitalMotorPosBack(const std_msgs::Float64::ConstPtr &msg){
+  this->DigitalCmdPos = msg->data;
 }
