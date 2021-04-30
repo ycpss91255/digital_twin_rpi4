@@ -109,6 +109,21 @@ int main(int argc, char **argv) {
   ParamHandle(argc, argv);
   MotorNodeHandle Node(argc, argv, RobotName, WheelNum);
   init(Node.getPin());
+  switch (Mode) {
+    case PosControlMode:
+      ROS_INFO("Pos Control Mode\n");
+      break;
+
+    case FeedBackMode:
+      ROS_INFO("Feed Back Mode\n");
+      break;
+
+    case DigitalDriveMode:
+      ROS_INFO("Digital Drive Mode\n");
+      break;
+    default:
+      ROS_INFO("Pos Control Mode\n");
+  }
 #ifndef ADJUST
   while (ros::ok()) {
     if (Mode == PosControlMode) {
@@ -155,7 +170,7 @@ void init(vector<int> Pin_v) {
   Pin.enA = Pin_v.at(4);
   Pin.enB = Pin_v.at(5);
   SLP_Pin = Pin_v.at(6);
-  for (int i = 0; i < Pin_v.size(); i++) printf("%d\n", Pin_v.at(i));
+  // for (int i = 0; i < Pin_v.size(); i++) printf("%d\n", Pin_v.at(i));
 
   if (pi < 0) {
     printf("Can't connect to pigpio daemon\n");
