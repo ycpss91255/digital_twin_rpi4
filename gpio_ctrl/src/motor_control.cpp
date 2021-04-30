@@ -109,17 +109,15 @@ int main(int argc, char **argv) {
   ParamHandle(argc, argv);
   MotorNodeHandle Node(argc, argv, RobotName, WheelNum);
   init(Node.getPin());
-
 #ifndef ADJUST
   while (ros::ok()) {
     if (Mode == PosControlMode) {
       float CmdPos = Node.getCmdPos();
       PosControl(CmdPos, Kp, Kd);
-    }
-    else if (Mode == FeedBackMode){}
-    else if(Mode == DigitalDriveMode){
+    } else if (Mode == FeedBackMode) {
+    } else if (Mode == DigitalDriveMode) {
       float CmdPos = Node.getDigitalCmdPos();
-      PosControl(CmdPos ,Kp, Kd);
+      PosControl(CmdPos, Kp, Kd);
     }
     Node.pubMotorFB(FBData->Step);
     Node.pubMotorCmdFB(Cmd);
@@ -157,6 +155,7 @@ void init(vector<int> Pin_v) {
   Pin.enA = Pin_v.at(4);
   Pin.enB = Pin_v.at(5);
   SLP_Pin = Pin_v.at(6);
+  for (int i = 0; i < Pin_v.size(); i++) printf("%d\n", Pin_v.at(i));
 
   if (pi < 0) {
     printf("Can't connect to pigpio daemon\n");
@@ -186,13 +185,14 @@ void init(vector<int> Pin_v) {
     cb_id_b = callback_ex(pi, Pin.enB, EITHER_EDGE, EncCallBack, FBData);
 
     if ((PinStatus.PWM || PinStatus.DIR || PinStatus.CS || PinStatus.enA ||
-         PinStatus.enB) != 0 || (Pin_v.at(0) && (SLPStatus != 0))) {
-      if(PinStatus.PWM) Pin_printf("PWM", Pin.PWM, PinStatus.PWM);
-      if(PinStatus.DIR) Pin_printf("DIR", Pin.DIR, PinStatus.DIR);
-      if(PinStatus.CS) Pin_printf("CS", Pin.CS, PinStatus.CS);
-      if(PinStatus.enA) Pin_printf("GPIO_ENA", Pin.enA, PinStatus.enA);
-      if(PinStatus.enB) Pin_printf("GPIO_ENB", Pin.enB, PinStatus.enB);
-      if(SLPStatus) Pin_printf("SLP", SLP_Pin, SLPStatus);
+         PinStatus.enB) != 0 ||
+        (Pin_v.at(0) && (SLPStatus != 0))) {
+      if (PinStatus.PWM) Pin_printf("PWM", Pin.PWM, PinStatus.PWM);
+      if (PinStatus.DIR) Pin_printf("DIR", Pin.DIR, PinStatus.DIR);
+      if (PinStatus.CS) Pin_printf("CS", Pin.CS, PinStatus.CS);
+      if (PinStatus.enA) Pin_printf("GPIO_ENA", Pin.enA, PinStatus.enA);
+      if (PinStatus.enB) Pin_printf("GPIO_ENB", Pin.enB, PinStatus.enB);
+      if (SLPStatus) Pin_printf("SLP", SLP_Pin, SLPStatus);
       clear();
     }
   }

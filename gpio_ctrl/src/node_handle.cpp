@@ -21,27 +21,32 @@ void MotorNodeHandle::init() {
 
   MotorFB_pub =
       this->n->advertise<std_msgs::Float64>((this->WheelNS + "/motorFB"), 100);
-  MotorCmdFB_pub =
-      this->n->advertise<gpio_ctrl::MotorCmdFB>((this->WheelNS + "/motor_cmdFB"), 100);
+  MotorCmdFB_pub = this->n->advertise<gpio_ctrl::MotorCmdFB>(
+      (this->WheelNS + "/motor_cmdFB"), 100);
   MotorPos_sub = this->n->subscribe<std_msgs::Float64>(
       (this->WheelNS + "/cmd_pos"), 1, &MotorNodeHandle::CmdPosBack, this);
 
   // Digital motor
-  string DigitalMotorPosTopicName = "/Digital" + RobotName +"/wheel" + to_string(this->WheelNum) + "/motorFB";
-  MotorPos_sub = this->n->subscribe<std_msgs::Float64>(
-    DigitalMotorPosTopicName, 1, &MotorNodeHandle::DigitalMotorPosBack, this);
-
+  string DigitalMotorPosTopicName = "/Digital" + RobotName + "/wheel" +
+                                    to_string(this->WheelNum) + "/motorFB";
+  DigitalMotorPos_sub = this->n->subscribe<std_msgs::Float64>(
+      DigitalMotorPosTopicName, 1, &MotorNodeHandle::DigitalMotorPosBack, this);
 }
 
 vector<int> MotorNodeHandle::getPin() {
   vector<int> PinData(7);
   vector<string> PinOrder = {"stp_sw", "dir", "pwm", "cs", "ena", "enb", "slp"};
   string WheelPin = this->WheelNS + "/pin/";
-
-  this->n->getParam((this->WheelNS + "/slp_sw"), PinData.at(0));
+  bool slp_sw;
+  this->n->getParam((this->WheelNS + "/slp_sw"), slp_sw);
+  PinData.at(0) = (slp_sw ? 1 : 0);
   for (int i = 1; i < PinOrder.size(); i++)
-    if (i != PinOrder.size() || PinData.at(0))
+    if (i != PinOrder.size() || PinData.at(0)) {
       this->n->getParam((WheelPin + PinOrder.at(i)), PinData.at(i));
+    }
+#ifdef DEBUG
+  for (int i = 0; i < PinOrder.size(); i++) printf("%d\n", PinData.at(i));
+#endif
   return PinData;
 }
 
@@ -62,14 +67,11 @@ void MotorNodeHandle::pubMotorCmdFB(gpio_ctrl::MotorCmdFB Cmd) {
   MotorCmdFB_pub.publish(msg);
 }
 
-float MotorNodeHandle::getCmdPos(){
-  return this->CmdPos;
-}
+float MotorNodeHandle::getCmdPos() { return this->CmdPos; }
 
-float MotorNodeHandle::getDigitalCmdPos(){
-  return this->DigitalCmdPos;
-}
+float MotorNodeHandle::getDigitalCmdPos() { return this->DigitalCmdPos; }
 
-void MotorNodeHandle::DigitalMotorPosBack(const std_msgs::Float64::ConstPtr &msg){
+void MotorNodeHandle::DigitalMotorPosBack(
+    const std_msgs::Float64::ConstPtr& msg) {
   this->DigitalCmdPos = msg->data;
 }

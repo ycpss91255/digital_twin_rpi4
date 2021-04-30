@@ -26,8 +26,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       nano vim \
       # shell
       byobu zsh terminator \
-      gnome-terminal libcanberra-gtk3-module \
+      gnome-terminal libcanberra-gtk-module libcanberra-gtk3-module \
       # work-tools
+      ros-noetic-rosserial-arduino ros-noetic-rosserial \
       python3-pip python3-catkin-tools python3-setuptools \
       python3-dev python3-gpiozero \
   && apt-get clean \
