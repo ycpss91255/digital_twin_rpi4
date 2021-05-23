@@ -15,6 +15,10 @@
 		"files.associations": {
 			"*.gazebo": "xml",
 			"sstream": "cpp"
-		}
+		},
+		"python.analysis.extraPaths": [
+			"/opt/ros/noetic/lib/python3/dist-packages"
+		],
+		"sshfs.configs": []
 	}
 }
