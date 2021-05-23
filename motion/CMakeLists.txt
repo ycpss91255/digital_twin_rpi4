@@ -6,17 +6,17 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   geometry_msgs
-  message_generation
+  # message_generation
 )
 
-add_message_files(
-  FILES
-  FourMotorStates.msg
-)
-generate_messages(
-  DEPENDENCIES
-  std_msgs  # Or other packages containing msgs
-)
+# add_message_files(
+#   FILES
+#   FourMotorStates.msg
+# )
+# generate_messages(
+#   DEPENDENCIES
+#   std_msgs  # Or other packages containing msgs
+# )
 
 catkin_package(
  INCLUDE_DIRS
@@ -26,7 +26,7 @@ catkin_package(
   roscpp
   rospy
   std_msgs
-  message_runtime
+  # message_runtime
 )
 
 include_directories(
