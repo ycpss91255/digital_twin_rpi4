@@ -46,7 +46,6 @@ RUN bash ./script/bash_setup.bash \
   # Dependent
   && bash ./script/rule_setup.bash \
   && bash ./script/pip_setup.bash \
-  && bash ./script/pigpio_setup.bash \
   && rm -rf /home/${USER}/.tmp
 
 # copy entrypoint
