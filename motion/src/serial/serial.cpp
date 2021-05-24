@@ -48,22 +48,41 @@ Serial::Serial(const char* port, unsigned int baud) {
 
 Serial::~Serial() { close(this->fd); }
 
+/**
+
+* @brief  calculation crc code or check crc status
+
+* @param  msg, message to be calculated
+
+* @param  mode, 0 = return mode, 1 = check mode
+
+* @return  crc code(1 byte) or check status(1/0) or error(-1)
+
+*/
+int Serial::calculation_crc(char* msg, int len) {
+  // CRC Calculation
+  int crc = 0;
+  for (int i = 1; i < (len - 2); i++) {
+    crc += msg[i];
+    crc = crc & 0xFF;
+  }
+  return crc;
+}
+
 void Serial::build_msg(float pwm[4]) {
   // write start and end packat
   this->pub_msg[0] = this->pub_start_buf;
   this->pub_msg[11] = this->pub_end_buf;
-
   // pwm values process
   bool dir[4] = {false};
   int tmp_pwm[4] = {0};
 
   for (int i = 0; i < 4; i++) {
     dir[i] = pwm[i] > 0 ? 1 : 0;
-
     // After obtaining dir, pwm is converted to unsigned
-    pwm[i] = abs(pwm[i]);
+    float abs_pwm = abs(pwm[i]);
     // speed 0 ~ 100 conversion to 0 ~ 65535
-    tmp_pwm[i] = pwm[i] > 100 ? 65535 : int(round((pwm[i]) * 655.35));
+    tmp_pwm[i] = abs_pwm > 100 ? 65535 : int(round(abs_pwm * 655.35));
     // tmp_pwm type = 2 bytes = 16 bits, but msg type is char(1 byte), so
     // disassemble tmp_pwm into HIGH and Low byte
     this->pub_msg[2 + i * 2] = (tmp_pwm[i] & 0xFF00) >> 8;
@@ -71,35 +90,23 @@ void Serial::build_msg(float pwm[4]) {
   }
 
   // write dir to msg[1] low bit
+  this->pub_msg[1] &= 0x00;
   this->pub_msg[1] |= dir[0] << 0;
   this->pub_msg[1] |= dir[2] << 1;
   this->pub_msg[1] |= dir[1] << 2;
   this->pub_msg[1] |= dir[3] << 3;
 
-  // CRC Calculation
-  int crc = 0;
-  for (int i = 0; i < 9; i++) {
-    crc += this->pub_msg[i + 1];
-    crc = crc & 0xFF;
-  }
-  this->pub_msg[10] = crc;
+  // write crc
+  this->pub_msg[10] = calculation_crc(this->pub_msg, 12);
 
 #ifdef DEBUG
-  printf_binary("dir: ", this->msg[1]);
-  printf("\n");
-  printf_binary("MA H_Spd: ", this->msg[2]);
-  printf_binary("MA L_Spd: ", this->msg[3]);
-  printf("\n");
-  printf_binary("MB H_Spd: ", this->msg[4]);
-  printf_binary("MB L_Spd: ", this->msg[5]);
-  printf("\n");
-  printf_binary("MC H_Spd: ", this->msg[6]);
-  printf_binary("MC L_Spd: ", this->msg[7]);
-  printf("\n");
-  printf_binary("MD H_Spd: ", this->msg[8]);
-  printf_binary("MD L_Spd: ", this->msg[9]);
-  printf("\n");
-  printf_binary("CRC     : ", this->msg[10]);
+  // vector<string> text = {
+  //     "dir     :", "MA H_spd:", "MA L_spd:", "MB H_spd:", "MB L_spd:",
+  //     "MC H_spd:", "MC L_spd:", "MD H_spd:", "MD L_spd:", "CRC     :"};
+  // printf_binary(text, this->pub_msg, 12);
+
+  printf_hex("pub_msg(hex) :", this->pub_msg, 12);
+
 #endif  // DEBUG
 }
 
@@ -107,44 +114,90 @@ void Serial::pub_motor_pwm(float pwm[4]) {
   build_msg(pwm);
 
   int n = write(this->fd, this->pub_msg, 12);
+  if (n < 0) {
+    printf("n = %d, write() of %d bytes failed!\n", n, 12);
+  }
 }
 
-void Serial::unbuild_msg(){
-
+int Serial::unbuild_msg() {
+  // check subscribe message start and end packat is correct
+  if (this->sub_msg[0] == 0xAA && this->sub_msg[43] == 0xEE) {
+    int crc = calculation_crc(this->sub_msg, 44);
+    printf("crc = %d\n", crc);
+    if (this->sub_msg[42] == crc) {
+#ifdef DEBUG
+      printf_hex("sub_msg :", this->sub_msg, 44);
+#endif  // DEBUG
+      return 1;
+    } else {
+#ifdef DEBUG
+      printf("crc check error");
+#endif  // DEBUG
+      return 0;
+    }
+  } else {
+    return -1;
+  }
 }
 
-void Serial::sub_feedback(){
+int Serial::sub_feedback() {
+  // Read bytes. The behaviour of read() (e.g. does it block?,
+  // how long does it block for?) depends on the configuration
+  // settings above, specifically VMIN and VTIME
+  int check = 0;
+  int buf_len = sizeof(sub_msg);
+  char tmp_msg[buf_len];
 
-    // Read bytes. The behaviour of read() (e.g. does it block?,
-    // how long does it block for?) depends on the configuration
-    // settings above, specifically VMIN and VTIME
-    int n = read(this->fd, this->sub_msg, 44);
+  char fuck[12] = {0};
+  int n = read(this->fd, tmp_msg, 12);
+  if (n < 0) {
+    printf("n = %d, read() of %d bytes failed!\n", n, 44);
+    return -1;
+  } else {
 
-    // if (n > 0) {
-    //   printf("n = %d, %s\n", n, read_buf);
-    //   for (int i = 0; i < read_len; i++) {
-    //     if (read_buf[i] == '\000') {
-    //       printf("bingo, i = %d\n", (i + 1));
-    //       break;
-    //     }
+    for (int i = 0; i < n; i++) {
+      sub_msg[i + tmp_msg_len] = tmp_msg[i];
+    }
 
-    // }
+    tmp_msg_len = 0;
+  }
 
-    // if (n < 0) {
-    //   printf("n = %d, read() of %d bytes failed!\n", n, read_len);
-    // }
-
+  // if (n < buf_len ) {
+  //   for (int i = 0; i < buf_len; i++) {
+  //   }
   // }
-
+// }
+unbuild_msg();
+#ifdef DEBUG
+if (check) {
 }
+#endif  // DEBUG
+
+return check;
+}
+
+char* Serial::get_sub_msg() { return this->sub_msg; }
 
 #ifdef DEBUG
-void Serial::printf_binary(const char* text, char hex_msg) {
-  printf("%s", text);
-  for (int i = 7; i >= 0; i--) {
-    printf("%d", ((hex_msg >> i) & 0x01));
-    if (i == 4) printf(" ");
+void Serial::printf_binary(vector<string> text, char* msg, int len) {
+  for (int j = 1; j < len - 1; j++) {
+    printf("%s ", text.at(j - 1).c_str());
+    for (int i = 7; i >= 0; i--) {
+      unsigned char u_msg = (unsigned char)msg[j];
+      printf("%d", ((msg[j] >> i) & 0x01));
+      if (i == 4) printf(" ");
+    }
+    printf("\n");
   }
   printf("\n");
+}
+void Serial::printf_hex(const char* text, char* msg, int len) {
+  printf("%s\n", text);
+  for (int j = 1; j < len - 1; j++) {
+    unsigned char u_msg = (unsigned char)msg[j];
+    printf("%02X", u_msg);
+    printf(" ");
+  }
+  printf("\n\n");
 }
 #endif  // DEBUG
